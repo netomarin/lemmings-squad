@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "project_name": "{{PROJECT_NAME}}",
+  "execution": {
+    "max_parallel_builders": 4,
+    "max_task_retries": 3,
+    "max_qa_retries": 2,
+    "default_approval_mode": "manual"
+  },
+  "qa": {
+    "install_cmd": "{{INSTALL_CMD}}",
+    "lint_cmd": "{{LINT_CMD}}",
+    "typecheck_cmd": "{{TYPECHECK_CMD}}",
+    "unit_test_cmd": "{{UNIT_TEST_CMD}}",
+    "integration_test_cmd": "{{INTEGRATION_TEST_CMD}}",
+    "security_scan_cmd": "{{SECURITY_SCAN_CMD}}",
+    "build_cmd": "{{BUILD_CMD}}"
+  },
+  "deploy": {
+    "default_strategy": "on_param",
+    "environments": {
+      "test": {
+        "command": "{{DEPLOY_TEST_CMD}}",
+        "smoke_test_cmd": "{{SMOKE_TEST_CMD}}"
+      },
+      "staging": {
+        "command": "{{DEPLOY_STAGING_CMD}}",
+        "smoke_test_cmd": "{{SMOKE_STAGING_CMD}}"
+      }
+    }
+  }
+}

@@ -1,0 +1,224 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lemmings-squad.local/schemas/backlog.schema.json",
+  "title": "Lemmings Squad Backlog DAG (03-backlog.json)",
+  "description": "Deterministic machine-readable task backlog organized in parallel execution waves.",
+  "type": "object",
+  "required": [
+    "run_id",
+    "step",
+    "spec_path",
+    "plan_path",
+    "status",
+    "config",
+    "waves"
+  ],
+  "properties": {
+    "run_id": {
+      "type": "string",
+      "pattern": "^[a-zA-Z0-9_-]+$"
+    },
+    "step": {
+      "type": "string",
+      "const": "03-backlog"
+    },
+    "spec_path": {
+      "type": "string"
+    },
+    "plan_path": {
+      "type": "string"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "READY",
+        "IN_PROGRESS",
+        "ALL_VERIFIED",
+        "QA_PASSED",
+        "COMPLETED",
+        "HALTED"
+      ]
+    },
+    "config": {
+      "type": "object",
+      "required": [
+        "max_task_retries",
+        "max_qa_retries",
+        "qa_commands",
+        "deploy"
+      ],
+      "properties": {
+        "max_task_retries": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 3
+        },
+        "max_qa_retries": {
+          "type": "integer",
+          "minimum": 1,
+          "default": 2
+        },
+        "qa_commands": {
+          "type": "object",
+          "properties": {
+            "install": { "type": ["string", "null"] },
+            "lint": { "type": ["string", "null"] },
+            "typecheck": { "type": ["string", "null"] },
+            "unit_test": { "type": ["string", "null"] },
+            "integration_test": { "type": ["string", "null"] },
+            "security_scan": { "type": ["string", "null"] },
+            "build": { "type": ["string", "null"] }
+          },
+          "additionalProperties": false
+        },
+        "deploy": {
+          "type": "object",
+          "required": ["enabled", "environment"],
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "environment": {
+              "type": "string",
+              "enum": ["none", "test", "staging"]
+            },
+            "command": { "type": ["string", "null"] },
+            "smoke_test_cmd": { "type": ["string", "null"] }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "waves": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "wave_number",
+          "title",
+          "isolation_mode",
+          "status",
+          "tasks"
+        ],
+        "properties": {
+          "wave_number": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "title": {
+            "type": "string"
+          },
+          "isolation_mode": {
+            "type": "string",
+            "enum": ["inherit", "share"]
+          },
+          "file_collision_detected": {
+            "type": "boolean"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "PENDING",
+              "IN_PROGRESS",
+              "DEV_DONE",
+              "VERIFIED",
+              "FAILED_VALIDATION",
+              "HALTED"
+            ]
+          },
+          "tasks": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "required": [
+                "id",
+                "title",
+                "description",
+                "depends_on",
+                "target_files",
+                "test_files",
+                "acceptance_criteria",
+                "verification_cmd",
+                "status",
+                "attempts"
+              ],
+              "properties": {
+                "id": {
+                  "type": "string",
+                  "pattern": "^TASK-[0-9A-Za-z_-]+$"
+                },
+                "title": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                },
+                "depends_on": {
+                  "type": "array",
+                  "items": { "type": "string" }
+                },
+                "target_files": {
+                  "type": "array",
+                  "minItems": 1,
+                  "items": { "type": "string" }
+                },
+                "test_files": {
+                  "type": "array",
+                  "items": { "type": "string" }
+                },
+                "acceptance_criteria": {
+                  "type": "array",
+                  "minItems": 1,
+                  "items": { "type": "string" }
+                },
+                "verification_cmd": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "PENDING",
+                    "IN_PROGRESS",
+                    "DEV_DONE",
+                    "VERIFIED",
+                    "FAILED_VALIDATION",
+                    "HALTED"
+                  ]
+                },
+                "attempts": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "builder_report_file": {
+                  "type": ["string", "null"]
+                },
+                "inspector_history": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": ["attempt", "verdict", "feedback", "report_file", "timestamp"],
+                    "properties": {
+                      "attempt": { "type": "integer" },
+                      "verdict": {
+                        "type": "string",
+                        "enum": ["VERIFIED", "FAILED_VALIDATION"]
+                      },
+                      "feedback": { "type": "string" },
+                      "report_file": { "type": "string" },
+                      "timestamp": { "type": "string" }
+                    }
+                  }
+                }
+              },
+              "additionalProperties": false
+            }
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

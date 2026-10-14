@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0f172a"/>
+      <stop offset="100%" stop-color="#1e293b"/>
+    </linearGradient>
+    <linearGradient id="hair" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#22c55e"/>
+      <stop offset="100%" stop-color="#4ade80"/>
+    </linearGradient>
+    <linearGradient id="tunic" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#3b82f6"/>
+      <stop offset="100%" stop-color="#1d4ed8"/>
+    </linearGradient>
+  </defs>
+  <!-- Background Badge -->
+  <rect x="8" y="8" width="112" height="112" rx="24" fill="url(#bg)" stroke="#334155" stroke-width="4"/>
+  <!-- Green Lemming Hair -->
+  <path d="M36 44 C36 26, 56 22, 68 26 C80 22, 94 30, 92 44 Z" fill="url(#hair)"/>
+  <!-- Head / Face -->
+  <rect x="44" y="42" width="40" height="30" rx="10" fill="#fde68a"/>
+  <!-- Eyes -->
+  <circle cx="56" cy="54" r="4" fill="#0f172a"/>
+  <circle cx="72" cy="54" r="4" fill="#0f172a"/>
+  <!-- Commander Visor / Helmet Accent -->
+  <path d="M42 44 H86" stroke="#f59e0b" stroke-width="4" stroke-linecap="round"/>
+  <!-- Blue Tunic Body -->
+  <path d="M40 72 L88 72 L94 104 L34 104 Z" rx="8" fill="url(#tunic)"/>
+  <!-- Builder Pickaxe / Blueprint Scroll Icon -->
+  <rect x="52" y="80" width="24" height="16" rx="3" fill="#f8fafc" stroke="#94a3b8" stroke-width="2"/>
+  <line x1="56" y1="85" x2="72" y2="85" stroke="#3b82f6" stroke-width="2"/>
+  <line x1="56" y1="91" x2="68" y2="91" stroke="#22c55e" stroke-width="2"/>
+</svg>

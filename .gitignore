@@ -1,0 +1,28 @@
+# Python cache & bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# macOS / OS metadata
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# IDE / Editor directories
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Local Lemmings execution runs (if tested inside this repo)
+.lemmings/
+_agents/

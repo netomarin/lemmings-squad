@@ -1,0 +1,298 @@
+#!/usr/bin/env python3
+"""
+Lemmings Squad CLI (`bin/lemmings`).
+Provides terminal commands to initialize repo config, inspect run status,
+approve implementation plans, and trigger Lemmings Squad via `agentapi`.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import re
+import shutil
+import subprocess
+import sys
+from datetime import datetime, timezone
+from pathlib import Path
+from typing import Any, Dict, List, Optional
+
+
+def now_iso() -> str:
+    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def find_latest_run_dir(workspace: Path, run_id: Optional[str] = None) -> Optional[Path]:
+    runs_dir = workspace / ".lemmings" / "runs"
+    if not runs_dir.is_dir():
+        return None
+    if run_id:
+        candidate = runs_dir / run_id
+        return candidate if candidate.is_dir() else None
+    dirs = [d for d in sorted(runs_dir.iterdir()) if d.is_dir() and (d / "00-run-status.json").exists()]
+    return dirs[-1] if dirs else None
+
+
+def cmd_init_config(args: argparse.Namespace) -> int:
+    workspace = Path(args.workspace).resolve()
+    script_candidates = [
+        Path.home() / ".gemini" / "config" / "plugins" / "lemmings-squad" / "skills" / "lemmings-init" / "scripts" / "init_config.py",
+        Path(__file__).resolve().parent.parent / "plugin" / "skills" / "lemmings-init" / "scripts" / "init_config.py",
+    ]
+    init_script = next((p for p in script_candidates if p.exists()), None)
+    if not init_script:
+        print(json.dumps({"ok": False, "error": "init_config.py not found."}), file=sys.stderr)
+        return 1
+
+    cmd = [sys.executable, str(init_script), "--workspace", str(workspace)]
+    if args.force:
+        cmd.append("--force")
+    if args.with_templates:
+        cmd.append("--with-templates")
+    if args.with_ci:
+        cmd.append("--with-ci")
+    if args.with_cd:
+        cmd.append("--with-cd")
+    if args.ci_provider:
+        cmd.extend(["--ci-provider", args.ci_provider])
+    if getattr(args, "cloud_target", None):
+        cmd.extend(["--cloud-target", args.cloud_target])
+    if getattr(args, "scaffold_infra", False):
+        cmd.append("--scaffold-infra")
+    for opt_name, attr_name in [
+        ("--deploy-test-cmd", "deploy_test_cmd"),
+        ("--deploy-staging-cmd", "deploy_staging_cmd"),
+        ("--deploy-prod-cmd", "deploy_prod_cmd"),
+        ("--smoke-test-cmd", "smoke_test_cmd"),
+        ("--smoke-staging-cmd", "smoke_staging_cmd"),
+        ("--smoke-prod-cmd", "smoke_prod_cmd"),
+    ]:
+        val = getattr(args, attr_name, None)
+        if val is not None:
+            cmd.extend([opt_name, val])
+    proc = subprocess.run(cmd)
+    return proc.returncode
+
+
+def cmd_status(args: argparse.Namespace) -> int:
+    workspace = Path(args.workspace).resolve()
+    run_dir = find_latest_run_dir(workspace, args.run_id)
+    if not run_dir:
+        msg = {"ok": False, "error": f"No active Lemmings run found in {workspace / '.lemmings' / 'runs'}"}
+        if args.json:
+            print(json.dumps(msg, indent=2))
+        else:
+            print(f"[lemmings] Nenhuma run encontrada em {workspace / '.lemmings' / 'runs'}")
+        return 1
+
+    status_path = run_dir / "00-run-status.json"
+    backlog_path = run_dir / "03-backlog.json"
+    status_data = json.loads(status_path.read_text(encoding="utf-8")) if status_path.exists() else {}
+    backlog_data = json.loads(backlog_path.read_text(encoding="utf-8")) if backlog_path.exists() else {}
+
+    waves = backlog_data.get("waves", [])
+    tasks = [t for w in waves for t in w.get("tasks", [])]
+    counts: Dict[str, int] = {}
+    for t in tasks:
+        st = t.get("status", "PENDING")
+        counts[st] = counts.get(st, 0) + 1
+
+    payload = {
+        "ok": True,
+        "run_id": status_data.get("run_id", run_dir.name),
+        "run_dir": str(run_dir),
+        "spec_source": status_data.get("spec_source", ""),
+        "current_step": status_data.get("current_step", "UNKNOWN"),
+        "status": status_data.get("status", "UNKNOWN"),
+        "deploy_target": status_data.get("deploy_target", "none"),
+        "total_waves": len(waves),
+        "total_tasks": len(tasks),
+        "task_counts": counts,
+        "artifacts": status_data.get("artifacts", {}),
+    }
+
+    if args.json:
+        print(json.dumps(payload, indent=2, ensure_ascii=False))
+        return 0
+
+    print(f"=== Lemmings Squad Run: {payload['run_id']} ===")
+    print(f"  Spec:         {payload['spec_source']}")
+    print(f"  Current Step: {payload['current_step']}")
+    print(f"  Status:       {payload['status']}")
+    print(f"  Deploy Env:   {payload['deploy_target']}")
+    print(f"  Waves/Tasks:  {payload['total_waves']} wave(s), {payload['total_tasks']} task(s) {counts}")
+    return 0
+
+
+def cmd_approve(args: argparse.Namespace) -> int:
+    workspace = Path(args.workspace).resolve()
+    run_dir = find_latest_run_dir(workspace, args.run_id)
+    if not run_dir:
+        print(json.dumps({"ok": False, "error": "No active run found to approve."}), file=sys.stderr)
+        return 1
+
+    plan_path = run_dir / "02-implementation-plan.md"
+    status_path = run_dir / "00-run-status.json"
+
+    if plan_path.exists():
+        text = plan_path.read_text(encoding="utf-8")
+        updated = re.sub(
+            r"(Status(?:\s+de\s+Aprova[cç][aã]o)?:\**\s*`?)PENDING(`?)",
+            r"\g<1>APPROVED\g<2>",
+            text,
+            flags=re.IGNORECASE,
+        )
+        if updated == text and "APPROVED" not in text:
+            updated = text.rstrip() + "\n\n- **Status de Aprovação:** `APPROVED`\n"
+        plan_path.write_text(updated, encoding="utf-8")
+
+    if status_path.exists():
+        st = json.loads(status_path.read_text(encoding="utf-8"))
+        st["current_step"] = "02_PLAN_APPROVED"
+        st["status"] = "IN_PROGRESS"
+        st["updated_at"] = now_iso()
+        status_path.write_text(json.dumps(st, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+
+    prompt = f"Aprovado o plano da run {run_dir.name} em {workspace}. Pode seguir com o Lemmings."
+    agentapi_bin = shutil.which("agentapi")
+    dispatched = False
+
+    if not args.dry_run and agentapi_bin:
+        if args.conversation_id:
+            subprocess.run([agentapi_bin, "send-message", args.conversation_id, prompt], check=False)
+            dispatched = True
+        elif args.new_conversation:
+            subprocess.run(
+                [agentapi_bin, "new-conversation", f"--title=Lemmings Resume: {run_dir.name}", prompt],
+                check=False,
+            )
+            dispatched = True
+
+    print(
+        json.dumps(
+            {
+                "ok": True,
+                "run_id": run_dir.name,
+                "current_step": "02_PLAN_APPROVED",
+                "plan_file": str(plan_path),
+                "agentapi_dispatched": dispatched,
+                "resume_prompt": prompt,
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    return 0
+
+
+def cmd_run(args: argparse.Namespace) -> int:
+    workspace = Path(args.workspace).resolve()
+    spec_arg = args.spec
+    extra_flags: List[str] = []
+    if args.deploy and args.deploy != "none":
+        extra_flags.append(f"com deploy final no ambiente '{args.deploy}'")
+    if args.auto_approve:
+        extra_flags.append("com aprovação automática (auto_approve=true)")
+
+    suffix = (" " + ", ".join(extra_flags)) if extra_flags else ""
+    prompt = f"Use o Lemmings Squad para implementar a especificação '{spec_arg}' no repositório {workspace}{suffix}."
+
+    agentapi_bin = shutil.which("agentapi")
+    dispatched = False
+    cmd_preview = ["agentapi", "new-conversation", f"--title=Lemmings Squad: {spec_arg}", prompt]
+    if args.model and args.model != "inherit":
+        cmd_preview.insert(2, f"--model={args.model}")
+
+    if not args.dry_run and agentapi_bin:
+        exec_cmd = [agentapi_bin] + cmd_preview[1:]
+        subprocess.run(exec_cmd, check=False)
+        dispatched = True
+
+    print(
+        json.dumps(
+            {
+                "ok": True,
+                "workspace": str(workspace),
+                "spec": spec_arg,
+                "deploy": args.deploy,
+                "auto_approve": bool(args.auto_approve),
+                "agentapi_dispatched": dispatched,
+                "command": cmd_preview,
+                "prompt": prompt,
+            },
+            indent=2,
+            ensure_ascii=False,
+        )
+    )
+    return 0
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description="Lemmings Squad CLI")
+    sub = parser.add_subparsers(dest="command", required=True)
+
+    p_init = sub.add_parser("init-config", help="Auto-discover stack, generate .lemmings/config.yaml & optional CI/CD pipelines")
+    p_init.add_argument("--workspace", default=".", help="Target repository root (default: current directory)")
+    p_init.add_argument("--force", action="store_true", help="Overwrite existing config/workflows")
+    p_init.add_argument("--with-templates", action="store_true", help="Copy customizable templates to .lemmings/templates/")
+    p_init.add_argument("--with-ci", action="store_true", help="Generate/update Continuous Integration (CI) pipeline via lemming-basher")
+    p_init.add_argument("--with-cd", action="store_true", help="Generate/update Continuous Delivery/Deployment (CD) pipeline via lemming-basher")
+    p_init.add_argument(
+        "--ci-provider",
+        default="auto",
+        choices=["auto", "github", "github-actions", "gitlab", "gitlab-ci", "cloudbuild", "cloud-build", "githooks", "git-hooks"],
+        help="CI/CD platform provider",
+    )
+    p_init.add_argument(
+        "--cloud-target",
+        default="auto",
+        choices=["auto", "cloud-run", "firebase", "gke", "custom"],
+        help="Target cloud platform for CD",
+    )
+    p_init.add_argument(
+        "--scaffold-infra",
+        action="store_true",
+        help="Scaffold missing Dockerfile, .dockerignore, firebase.json, and .env.example",
+    )
+    p_init.add_argument("--deploy-test-cmd", default=None, help="Override deploy.environments.test.command")
+    p_init.add_argument("--deploy-staging-cmd", default=None, help="Override deploy.environments.staging.command")
+    p_init.add_argument("--deploy-prod-cmd", default=None, help="Override deploy.environments.production.command")
+    p_init.add_argument("--smoke-test-cmd", default=None, help="Override deploy.environments.test.smoke_test_cmd")
+    p_init.add_argument("--smoke-staging-cmd", default=None, help="Override deploy.environments.staging.smoke_test_cmd")
+    p_init.add_argument("--smoke-prod-cmd", default=None, help="Override deploy.environments.production.smoke_test_cmd")
+    p_init.set_defaults(func=cmd_init_config)
+
+    p_stat = sub.add_parser("status", help="Inspect current Lemmings Squad run status")
+    p_stat.add_argument("--workspace", default=".", help="Target repository root")
+    p_stat.add_argument("--run-id", default=None, help="Specific run ID (defaults to latest)")
+    p_stat.add_argument("--json", action="store_true", help="Output raw JSON")
+    p_stat.set_defaults(func=cmd_status)
+
+    p_app = sub.add_parser("approve", help="Mark 02-implementation-plan.md as APPROVED and optionally resume via agentapi")
+    p_app.add_argument("--workspace", default=".", help="Target repository root")
+    p_app.add_argument("--run-id", default=None, help="Specific run ID (defaults to latest)")
+    p_app.add_argument("--conversation-id", default=None, help="Existing Antigravity conversation ID to message")
+    p_app.add_argument("--new-conversation", action="store_true", help="Start a new conversation via agentapi")
+    p_app.add_argument("--dry-run", action="store_true", help="Do not invoke agentapi binary")
+    p_app.set_defaults(func=cmd_approve)
+
+    p_run = sub.add_parser("run", help="Trigger a Lemmings Squad run for a specification")
+    p_run.add_argument("spec", help="Path to the spec file or feature description")
+    p_run.add_argument("--workspace", default=".", help="Target repository root")
+    p_run.add_argument("--deploy", default="none", choices=["none", "test", "staging", "homolog"])
+    p_run.add_argument("--auto-approve", action="store_true", help="Enable autonomous plan approval")
+    p_run.add_argument("--model", default="inherit", choices=["inherit", "pro", "flash", "flash_lite"])
+    p_run.add_argument("--dry-run", action="store_true", help="Do not invoke agentapi binary")
+    p_run.set_defaults(func=cmd_run)
+
+    return parser
+
+
+def main() -> int:
+    parser = build_parser()
+    args = parser.parse_args()
+    return args.func(args)
+
+
+if __name__ == "__main__":
+    sys.exit(main())

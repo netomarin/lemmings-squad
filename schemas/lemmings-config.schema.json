@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lemmings-squad.local/schemas/lemmings-config.schema.json",
+  "title": "Lemmings Repository Configuration (.lemmings/config.yaml)",
+  "type": "object",
+  "required": ["version", "project_name"],
+  "properties": {
+    "version": {
+      "type": "integer",
+      "const": 1
+    },
+    "project_name": {
+      "type": "string"
+    },
+    "execution": {
+      "type": "object",
+      "properties": {
+        "max_parallel_builders": { "type": "integer", "minimum": 1, "default": 4 },
+        "max_task_retries": { "type": "integer", "minimum": 1, "default": 3 },
+        "max_qa_retries": { "type": "integer", "minimum": 1, "default": 2 },
+        "default_approval_mode": {
+          "type": "string",
+          "enum": ["manual", "auto"],
+          "default": "manual"
+        }
+      }
+    },
+    "qa": {
+      "type": "object",
+      "properties": {
+        "install_cmd": { "type": ["string", "null"] },
+        "lint_cmd": { "type": ["string", "null"] },
+        "typecheck_cmd": { "type": ["string", "null"] },
+        "unit_test_cmd": { "type": ["string", "null"] },
+        "integration_test_cmd": { "type": ["string", "null"] },
+        "security_scan_cmd": { "type": ["string", "null"] },
+        "build_cmd": { "type": ["string", "null"] }
+      }
+    },
+    "deploy": {
+      "type": "object",
+      "properties": {
+        "default_strategy": {
+          "type": "string",
+          "enum": ["never", "auto", "ask", "on_param"],
+          "default": "on_param"
+        },
+        "environments": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "object",
+            "required": ["command"],
+            "properties": {
+              "command": { "type": "string" },
+              "smoke_test_cmd": { "type": ["string", "null"] }
+            }
+          }
+        }
+      }
+    }
+  }
+}

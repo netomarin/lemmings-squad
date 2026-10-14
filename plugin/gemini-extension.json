@@ -1,0 +1,8 @@
+{
+  "name": "lemmings-squad",
+  "description": "Autonomous multi-agent software development lifecycle squad for spec-driven planning, parallel implementation, zero-trust validation, global QA/security, and deployment.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Neto Marin"
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "name": "lemmings-squad",
+  "displayName": "Lemmings Squad — Multi-Agent SDLC",
+  "version": "0.1.0",
+  "description": "Autonomous multi-agent software development lifecycle squad (Commander, Scout, Builder, Inspector, Bomber, Floater) for spec-driven planning, parallel implementation, zero-trust validation, global QA/security, and deployment.",
+  "logo": "assets/logo.svg"
+}

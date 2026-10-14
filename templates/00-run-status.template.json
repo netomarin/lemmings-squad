@@ -1,0 +1,23 @@
+{
+  "run_id": "{{RUN_ID}}",
+  "spec_source": "{{SPEC_SOURCE}}",
+  "current_step": "{{CURRENT_STEP}}",
+  "status": "{{STATUS}}",
+  "auto_approve": {{AUTO_APPROVE}},
+  "deploy_target": "{{DEPLOY_TARGET}}",
+  "created_at": "{{CREATED_AT}}",
+  "updated_at": "{{UPDATED_AT}}",
+  "artifacts": {
+    "scout_reports": [
+      ".lemmings/runs/{{RUN_ID}}/01-scout-report.md"
+    ],
+    "implementation_plan": ".lemmings/runs/{{RUN_ID}}/02-implementation-plan.md",
+    "backlog_json": null,
+    "backlog_md": null,
+    "builder_reports": [],
+    "inspector_reports": [],
+    "bomber_reports": [],
+    "floater_report": null,
+    "final_summary": null
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "command": "python3",
+  "args": ["lemmings_watcher.py"],
+  "restart_policy": "always",
+  "description": "Monitors .lemmings/inbox/*.md specifications and APPROVED status transitions in .lemmings/runs/*/02-implementation-plan.md to trigger Lemmings Squad via agentapi."
+}

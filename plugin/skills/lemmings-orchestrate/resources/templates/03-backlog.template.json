@@ -1,0 +1,58 @@
+{
+  "run_id": "{{RUN_ID}}",
+  "step": "03-backlog",
+  "spec_path": "{{SPEC_SOURCE}}",
+  "plan_path": ".lemmings/runs/{{RUN_ID}}/02-implementation-plan.md",
+  "status": "READY",
+  "config": {
+    "max_task_retries": 3,
+    "max_qa_retries": 2,
+    "qa_commands": {
+      "install": null,
+      "lint": "{{LINT_CMD}}",
+      "typecheck": "{{TYPECHECK_CMD}}",
+      "unit_test": "{{UNIT_TEST_CMD}}",
+      "integration_test": null,
+      "security_scan": "{{SECURITY_SCAN_CMD}}",
+      "build": "{{BUILD_CMD}}"
+    },
+    "deploy": {
+      "enabled": false,
+      "environment": "none",
+      "command": null,
+      "smoke_test_cmd": null
+    }
+  },
+  "waves": [
+    {
+      "wave_number": 1,
+      "title": "Wave 1 — Foundation & Contracts",
+      "isolation_mode": "inherit",
+      "file_collision_detected": false,
+      "status": "PENDING",
+      "tasks": [
+        {
+          "id": "TASK-01",
+          "title": "{{TASK_TITLE}}",
+          "description": "{{TASK_DESCRIPTION}}",
+          "depends_on": [],
+          "target_files": [
+            "{{TARGET_FILE_1}}"
+          ],
+          "test_files": [
+            "{{TEST_FILE_1}}"
+          ],
+          "acceptance_criteria": [
+            "{{CRITERION_1}}",
+            "{{CRITERION_2}}"
+          ],
+          "verification_cmd": "{{VERIFICATION_CMD}}",
+          "status": "PENDING",
+          "attempts": 0,
+          "builder_report_file": ".lemmings/runs/{{RUN_ID}}/04-wave-1-builder-TASK-01.md",
+          "inspector_history": []
+        }
+      ]
+    }
+  ]
+}
